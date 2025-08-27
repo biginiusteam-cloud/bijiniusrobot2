@@ -1,1 +1,15 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.db
+
+# Pyrogram local session (we don't use, but safe to ignore)
+*.session
+*.session-journal
+
+# OS
+.DS_Store
+Thumbs.db
 
