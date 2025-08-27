@@ -10,7 +10,7 @@ class Config:
 
     # Your Telegram database channel ID (add bot as admin there)
     # Example: -1001234567890
-    DATABASE_CHANNEL = int(os.environ.get("DATABASE_CHANNEL", "-1002828848208"))
+    DATABASE_CHANNEL = int(os.environ.get("DATABASE_CHANNEL", "-1002275599146"))
 
     # Welcome image URL
     WELCOME_PIC = os.environ.get("WELCOME_PIC", "https://envs.sh/F-V.jpg")
