@@ -18,3 +18,21 @@ class Config:
     # Regex used to extract Unique ID from your channel message
     # Matches things like: "🆔 Unique ID: 246810121" (case-insensitive, flexible spaces)
     UNIQUE_ID_REGEX = re.compile(r"(?i)unique\s*id\s*[:\-]\s*([A-Za-z0-9_\-\.]+)")
+
+    # ---------------- NEW SETTINGS ---------------- #
+
+    # Force-subscribe channel
+    # Use numeric ID (like -1001234567890) or channel username ("@mychannel")
+    FORCE_CHANNEL = os.environ.get("FORCE_CHANNEL", "-1002914520230")
+
+    # Admin users (comma separated IDs in env)
+    ADMINS = []
+    _admins_raw = os.environ.get("ADMINS", "7547946252,7881272094")
+    if _admins_raw:
+        try:
+            ADMINS = [int(x.strip()) for x in _admins_raw.split(",") if x.strip()]
+        except Exception:
+            ADMINS = []
+
+    # Delay between messages when broadcasting (to avoid flood limits)
+    BROADCAST_DELAY = float(os.environ.get("BROADCAST_DELAY", "0.05"))
