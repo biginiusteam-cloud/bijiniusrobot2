@@ -2,6 +2,13 @@ from pyrogram import Client, filters
 from pyrogram.types import CallbackQuery, Message
 from pymongo import MongoClient, ASCENDING
 from config import Config
+import asyncio
+
+# Import global auto delete time from autodelete.py
+try:
+    from .autodelete import AUTO_DELETE_TIME
+except ImportError:
+    AUTO_DELETE_TIME = 0  # fallback if not loaded
 
 mongo = MongoClient(Config.MONGO_URL)
 db = mongo["StatusBot"]
@@ -27,25 +34,40 @@ async def receive_unique_id(client: Client, message: Message):
     # Only act if user previously pressed "Check Status"
     st = states_col.find_one({"user_id": message.from_user.id})
     if not st or st.get("state") != "waiting_for_id":
-        # Ignore unrelated messages to keep UX clean
         return
 
     unique_id = message.text.strip()
     rec = messages_col.find_one({"unique_id": unique_id})
 
     if rec:
-        # Send back the exact stored message text
-        await message.reply_text(rec["message_text"], quote=True)
+        sent = await message.reply_text(rec["message_text"], quote=True)
+
+        # Auto-delete after time if enabled
+        if AUTO_DELETE_TIME > 0:
+            await asyncio.sleep(AUTO_DELETE_TIME)
+            try:
+                await sent.delete()
+                await message.delete()
+            except Exception:
+                pass
+
     else:
-        await message.reply_text(
+        sent = await message.reply_text(
             "❌ Sorry, no status found for this ID.\n"
             "Please check your Unique ID and try again.",
             quote=True
         )
+        if AUTO_DELETE_TIME > 0:
+            await asyncio.sleep(AUTO_DELETE_TIME)
+            try:
+                await sent.delete()
+                await message.delete()
+            except Exception:
+                pass
 
     # Clear state
     states_col.update_one(
         {"user_id": message.from_user.id},
-        {"$set": {"state": "idle"}},  # or delete if you prefer
+        {"$set": {"state": "idle"}},
         upsert=True
     )
