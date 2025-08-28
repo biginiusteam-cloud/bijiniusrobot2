@@ -20,6 +20,7 @@ class Config:
     UNIQUE_ID_REGEX = re.compile(r"(?i)unique\s*id\s*[:\-]\s*([A-Za-z0-9_\-\.]+)")
 
     # ---------------- NEW SETTINGS ---------------- #
+    AUTO_DELETE_TIME = 0  # default 0 = disabled
 
     # Force-subscribe channel
     # Use numeric ID (like -1001234567890) or channel username ("@mychannel")
