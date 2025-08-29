@@ -1,3 +1,6 @@
 pyrogram==2.0.106
-tgcrypto==1.2.5
-pymongo[srv]==4.3.3
+tgcrypto>=1.2.5
+motor>=3.4.0
+pymongo>=4.7.1
+uvloop>=0.19.0 ; sys_platform != "win32"
+python-dotenv>=1.0.1
