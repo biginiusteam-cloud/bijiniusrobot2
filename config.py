@@ -5,7 +5,7 @@ load_dotenv()  # allows local .env in dev; on Koyeb/Render just use env vars pan
 
 class Config:
     # Telegram API (get from https://my.telegram.org)
-    API_ID = int(os.getenv("API_ID", "0"))
+    API_ID = int(os.getenv("API_ID", ""))
     API_HASH = os.getenv("API_HASH", "")
 
     # Bot token (from @BotFather)
@@ -15,7 +15,7 @@ class Config:
     FORCE_SUB_CHANNEL = os.getenv("FORCE_SUB_CHANNEL", "")  # e.g. @MyUpdatesChannel or -1001234567890
 
     # Private database channel (must be numeric ID starting with -100; add your bot as admin)
-    DATABASE_CHANNEL = int(os.getenv("DATABASE_CHANNEL", "0"))
+    DATABASE_CHANNEL = int(os.getenv("DATABASE_CHANNEL", ""))
 
     # MongoDB (Atlas or free Mongo service)
     MONGO_URL = os.getenv("MONGO_URL", "")
@@ -25,7 +25,7 @@ class Config:
     ADMINS = {int(x) for x in os.getenv("ADMINS", "").split(",") if x.strip().isdigit()}
 
     # Auto-delete (minutes). 0 = disabled. Can be changed at runtime with /autodelete
-    AUTO_DELETE_MINUTES_DEFAULT = int(os.getenv("AUTO_DELETE_MINUTES", "0"))
+    AUTO_DELETE_MINUTES_DEFAULT = int(os.getenv("AUTO_DELETE_MINUTES", ""))
 
     # Media shown on /start (optional)
     WELCOME_PHOTO_URL = os.getenv("WELCOME_PHOTO_URL", "")  # direct URL or leave empty
