@@ -1,39 +1,34 @@
 import os
-import re
+from dotenv import load_dotenv
+
+load_dotenv()  # allows local .env in dev; on Koyeb/Render just use env vars panel
 
 class Config:
-    # Required env vars
-    BOT_TOKEN = os.environ.get("BOT_TOKEN", "")
-    API_ID = int(os.environ.get("API_ID", ""))
-    API_HASH = os.environ.get("API_HASH", "")
-    MONGO_URL = os.environ.get("MONGO_URL", "")
+    # Telegram API (get from https://my.telegram.org)
+    API_ID = int(os.getenv("API_ID", "0"))
+    API_HASH = os.getenv("API_HASH", "")
 
-    # Your Telegram database channel ID (add bot as admin there)
-    # Example: -1001234567890
-    DATABASE_CHANNEL = int(os.environ.get("DATABASE_CHANNEL", "-1002275599146"))
+    # Bot token (from @BotFather)
+    BOT_TOKEN = os.getenv("BOT_TOKEN", "")
 
-    # Welcome image URL
-    WELCOME_PIC = os.environ.get("WELCOME_PIC", "https://envs.sh/F-V.jpg")
+    # Force-subscribe channel (username like @mychannel OR numeric ID like -100123...)
+    FORCE_SUB_CHANNEL = os.getenv("FORCE_SUB_CHANNEL", "")  # e.g. @MyUpdatesChannel or -1001234567890
 
-    # Regex used to extract Unique ID from your channel message
-    # Matches things like: "🆔 Unique ID: 246810121" (case-insensitive, flexible spaces)
-    UNIQUE_ID_REGEX = re.compile(r"(?i)unique\s*id\s*[:\-]\s*([A-Za-z0-9_\-\.]+)")
+    # Private database channel (must be numeric ID starting with -100; add your bot as admin)
+    DATABASE_CHANNEL = int(os.getenv("DATABASE_CHANNEL", "0"))
 
-    # ---------------- NEW SETTINGS ---------------- #
-    AUTO_DELETE_TIME = 0  # default 0 = disabled
+    # MongoDB (Atlas or free Mongo service)
+    MONGO_URL = os.getenv("MONGO_URL", "")
+    MONGO_DB_NAME = os.getenv("MONGO_DB_NAME", "biginusbot")
 
-    # Force-subscribe channel
-    # Use numeric ID (like -1001234567890) or channel username ("@mychannel")
-    FORCE_CHANNEL = os.environ.get("FORCE_CHANNEL", "-1002914520230")
+    # Admin user IDs (comma separated: "123,456")
+    ADMINS = {int(x) for x in os.getenv("ADMINS", "").split(",") if x.strip().isdigit()}
 
-    # Admin users (comma separated IDs in env)
-    ADMINS = []
-    _admins_raw = os.environ.get("ADMINS", "7547946252,7881272094")
-    if _admins_raw:
-        try:
-            ADMINS = [int(x.strip()) for x in _admins_raw.split(",") if x.strip()]
-        except Exception:
-            ADMINS = []
+    # Auto-delete (minutes). 0 = disabled. Can be changed at runtime with /autodelete
+    AUTO_DELETE_MINUTES_DEFAULT = int(os.getenv("AUTO_DELETE_MINUTES", "0"))
 
-    # Delay between messages when broadcasting (to avoid flood limits)
-    BROADCAST_DELAY = float(os.environ.get("BROADCAST_DELAY", "0.05"))
+    # Media shown on /start (optional)
+    WELCOME_PHOTO_URL = os.getenv("WELCOME_PHOTO_URL", "")  # direct URL or leave empty
+
+    # Misc
+    LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
