@@ -1,73 +1,66 @@
-from pyrogram import Client, filters
-from pyrogram.types import CallbackQuery, Message
-from pymongo import MongoClient, ASCENDING
-from config import Config
 import asyncio
+from datetime import datetime, timezone
+from pyrogram import Client, filters
+from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from .force_subscribe import ensure_force_sub
+from .logger import log
 
-# Import global auto delete time from autodelete.py
-try:
-    from .autodelete import AUTO_DELETE_TIME
-except ImportError:
-    AUTO_DELETE_TIME = 0  # fallback if not loaded
+ASK_ID_STATE = {}  # simple in-memory state: user_id -> waiting bool
 
-mongo = MongoClient(Config.MONGO_URL)
-db = mongo["StatusBot"]
-messages_col = db["messages"]       # stores {unique_id, message_text, created_at}
-states_col = db["user_states"]      # stores {user_id, state}
-
-# Helpful indexes (safe to run many times)
-messages_col.create_index([("unique_id", ASCENDING)], unique=True)
-states_col.create_index([("user_id", ASCENDING)], unique=True)
+async def get_autodelete_minutes(client: Client) -> int:
+    s = await client.col_settings.find_one({"key": "autodelete_minutes"})
+    return int(s["value"]) if s and isinstance(s.get("value"), int) else 0
 
 @Client.on_callback_query(filters.regex("^check_status$"))
-async def ask_unique_id(client: Client, cq: CallbackQuery):
-    await cq.message.reply_text("✍️ Please send me your <b>Unique ID</b>.", quote=True)
-    states_col.update_one(
-        {"user_id": cq.from_user.id},
-        {"$set": {"state": "waiting_for_id"}},
-        upsert=True
-    )
-    await cq.answer()
+async def on_check_status_click(client: Client, cq):
+    user_id = cq.from_user.id
+    if not await ensure_force_sub(client, user_id):
+        await cq.answer("Please join the channel first.", show_alert=True)
+        return
+    ASK_ID_STATE[user_id] = True
+    await cq.message.reply_text("Please enter your **Unique ID** (numbers only).")
 
-@Client.on_message(filters.private & filters.text & ~filters.command(["start", "help"]))
-async def receive_unique_id(client: Client, message: Message):
-    # Only act if user previously pressed "Check Status"
-    st = states_col.find_one({"user_id": message.from_user.id})
-    if not st or st.get("state") != "waiting_for_id":
+@Client.on_message(filters.private & ~filters.command(["start", "help"]))
+async def on_user_text(client: Client, message):
+    user_id = message.from_user.id
+    text = (message.text or "").strip()
+
+    if not ASK_ID_STATE.get(user_id):
+        return  # ignore random messages unless they tapped Check Status
+
+    if not text.isdigit():
+        await message.reply_text("Unique ID must be numbers only. Try again.")
         return
 
-    unique_id = message.text.strip()
-    rec = messages_col.find_one({"unique_id": unique_id})
+    unique_id = text
+    ASK_ID_STATE.pop(user_id, None)
 
-    if rec:
-        sent = await message.reply_text(rec["message_text"], quote=True)
-
-        # Auto-delete after time if enabled
-        if AUTO_DELETE_TIME > 0:
-            await asyncio.sleep(AUTO_DELETE_TIME)
-            try:
-                await sent.delete()
-                await message.delete()
-            except Exception:
-                pass
-
-    else:
-        sent = await message.reply_text(
-            "❌ Sorry, no status found for this ID.\n"
-            "Please check your Unique ID and try again.",
-            quote=True
-        )
-        if AUTO_DELETE_TIME > 0:
-            await asyncio.sleep(AUTO_DELETE_TIME)
-            try:
-                await sent.delete()
-                await message.delete()
-            except Exception:
-                pass
-
-    # Clear state
-    states_col.update_one(
-        {"user_id": message.from_user.id},
-        {"$set": {"state": "idle"}},
-        upsert=True
+    # Find latest status for that ID
+    doc = await client.col_statuses.find_one(
+        {"unique_id": unique_id},
+        sort=[("timestamp", -1)]
     )
+
+    if not doc:
+        m = await message.reply_text(
+            "No status found for this Unique ID yet. Please check later."
+        )
+        minutes = await get_autodelete_minutes(client)
+        if minutes > 0:
+            asyncio.create_task(_auto_delete(client, m.chat.id, m.id, minutes))
+        return
+
+    # Reply with the exact saved message text
+    reply = await message.reply_text(doc["message_text"])
+
+    # Auto-delete logic
+    minutes = await get_autodelete_minutes(client)
+    if minutes > 0:
+        asyncio.create_task(_auto_delete(client, reply.chat.id, reply.id, minutes))
+
+async def _auto_delete(client: Client, chat_id: int, msg_id: int, minutes: int):
+    try:
+        await asyncio.sleep(minutes * 60)
+        await client.delete_messages(chat_id, msg_id)
+    except Exception as e:
+        log.warning(f"Auto-delete failed: {e}")
